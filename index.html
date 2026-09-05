@@ -1,8 +1,26 @@
+<html>  
 
-<html>
-    <title>안녕하세요</title>
-    <body>
-        <h1>안녕하세요</h1>
-        <p>저는 AI입니다.</p>   
+<head>  
+    <title>MaChatBot</title>
 
+<body>  
+    <h1>MaChatBot</h1>
+    <a href="newpage.html">Go to New Page</a>
+    <div>
+        <p id="chat"></p>
+        <input type="text" id="input">
+        <button onclick="send()">Send</button>
+    </div>
+    <script>
+        function send(){
+            const text = document.querySelector("#input")
+            const chat = document.querySelector("#chat");
+
+            chat.innerHTML += text.value + "<br>";
+            text.value = ""
+            
+
+        }
+    </script>
+</body>
 </html>
