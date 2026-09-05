@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MaChatBot | Your thoughtful AI companion</title>
+    <title>MaChatBot | 나의 오프라인 AI 친구</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
@@ -118,40 +118,40 @@
     <div class="app">
         <aside class="sidebar">
             <a class="brand" href="index.html"><span class="brand-mark">M</span><span class="brand-name">Ma<span>Chat</span>Bot</span></a>
-            <button class="new-chat" id="newChat"><span>＋</span> New conversation</button>
+            <button class="new-chat" id="newChat"><span>＋</span> 새 대화</button>
             <div>
-                <p class="nav-label">Recent chats</p>
+                <p class="nav-label">최근 대화</p>
                 <nav class="history">
-                    <button class="active">Ideas for a quiet morning</button>
-                    <button>Plan my creative week</button>
-                    <button>Understanding a new topic</button>
+                    <button class="active">차분한 아침 아이디어</button>
+                    <button>창의적인 한 주 계획</button>
+                    <button>새로운 주제 쉽게 이해하기</button>
                 </nav>
             </div>
-            <div class="sidebar-footer"><div class="status">MaChatBot is online</div><div>Thoughtful answers, whenever you need them.</div></div>
+            <div class="sidebar-footer"><div class="status">오프라인 모드로 실행 중</div><div>인터넷과 API 없이도 대화할 수 있어요.</div></div>
         </aside>
         <main class="main">
             <header class="topbar">
-                <div><p class="eyebrow">Personal AI companion</p><h1>Good to see you.</h1></div>
-                <button class="top-action" id="clearChat">Clear chat</button>
+                <div><p class="eyebrow">나만의 오프라인 AI 친구</p><h1>다시 만나서 반가워요.</h1></div>
+                <button class="top-action" id="clearChat">대화 지우기</button>
             </header>
             <section class="conversation" aria-live="polite">
                 <div class="welcome" id="welcome">
-                    <h2>What would you like to <em>explore</em> today?</h2>
-                    <p>Bring me a question, a half-formed idea, or a blank page. We can make something meaningful from it together.</p>
+                    <h2>오늘은 무엇을 <em>탐험</em>해 볼까요?</h2>
+                    <p>질문, 떠오른 아이디어, 빈 문장을 편하게 보내 주세요. 이 브라우저 안에서 바로 생각을 정리해 드릴게요.</p>
                 </div>
                 <div class="messages" id="chat"></div>
             </section>
             <div class="composer-wrap">
                 <div class="suggestions">
-                    <button class="suggestion">Help me think through an idea</button>
-                    <button class="suggestion">Write something elegant</button>
-                    <button class="suggestion">Explain it simply</button>
+                    <button class="suggestion">아이디어를 함께 발전시켜 줘</button>
+                    <button class="suggestion">멋진 글을 써 줘</button>
+                    <button class="suggestion">쉽게 설명해 줘</button>
                 </div>
                 <form class="composer" id="composer">
-                    <input id="input" type="text" autocomplete="off" placeholder="Ask MaChatBot anything..." aria-label="Message MaChatBot">
-                    <button class="send" type="submit" aria-label="Send message">↑</button>
+                    <input id="input" type="text" autocomplete="off" placeholder="무엇이든 물어보세요..." aria-label="MaChatBot에게 보낼 메시지">
+                    <button class="send" type="submit" aria-label="메시지 보내기">↑</button>
                 </form>
-                <p class="disclaimer">MaChatBot can make mistakes. Check important information.</p>
+                <p class="disclaimer">인터넷과 외부 API를 사용하지 않는 오프라인 대화입니다. 중요한 정보는 확인해 주세요.</p>
             </div>
         </main>
     </div>
@@ -170,6 +170,27 @@
             message.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
 
+        let userName = "";
+
+        function offlineReply(text) {
+            const message = text.toLowerCase();
+            const nameMatch = text.match(/(?:내 이름은|나는|저는)\s*([^\s,.!?]+?)(?:입니다|이야|야)?(?:[.!?]|$)/);
+            if (nameMatch) {
+                userName = nameMatch[1];
+                return `${userName}님, 기억해 둘게요. 만나서 반가워요!`;
+            }
+            if (/^(안녕|하이|hello|hi)/i.test(text)) return `${userName ? `${userName}님, ` : ""}안녕하세요! 오늘 어떤 이야기를 나눠 볼까요?`;
+            if (/(고마워|감사)/.test(message)) return "도움이 되었다니 기뻐요. 더 필요한 것이 있으면 편하게 말해 주세요.";
+            if (/(이름|누구)/.test(message)) return "저는 MaChatBot이에요. 외부 API 없이 이 페이지 안에서 작동하는 오프라인 대화 친구입니다.";
+            if (/(아이디어|생각|기획|만들)/.test(message)) return "좋아요. 아이디어를 목적, 대상, 핵심 기능 세 가지로 나눠 보면 선명해져요. 무엇을 만들고 누구에게 도움이 되게 하고 싶나요?";
+            if (/(글|문장|작성|써 줘|써줘)/.test(message)) return "물론이죠. 먼저 글의 주제와 원하는 분위기(담백함, 따뜻함, 전문적임)를 알려 주세요. 짧은 초안부터 함께 다듬어 볼게요.";
+            if (/(쉽게|설명|무슨 뜻)/.test(message)) return "쉽게 말하면, 핵심은 ‘복잡한 내용을 작은 단계로 나누어 이해하는 것’이에요. 어떤 주제를 설명해 드릴까요?";
+            if (/(피곤|힘들|걱정|불안|슬퍼)/.test(message)) return "그렇게 느끼고 있군요. 지금 감정을 해결하려고 서두르지 않아도 괜찮아요. 가장 크게 마음에 걸리는 한 가지부터 말해도 좋아요.";
+            if (/(날씨|뉴스|검색|최신|오늘 뭐)/.test(message)) return "저는 인터넷이나 외부 API에 연결되어 있지 않아 실시간 정보는 확인할 수 없어요. 대신 알고 있는 내용을 정리하거나 질문을 더 구체화하는 일은 도와드릴 수 있어요.";
+            if (/[?？]/.test(text)) return "좋은 질문이에요. 현재 저는 오프라인 규칙과 대화 맥락을 바탕으로 답하고 있어요. 핵심 단어나 원하는 결과를 조금 더 알려 주시면 더 알맞게 도와드릴게요.";
+            return "흥미로운 이야기네요. 목적이나 원하는 결과를 한 문장만 더 알려 주시면, 다음 단계와 선택지를 함께 정리해 볼게요.";
+        }
+
         function send(text = input.value.trim()) {
             if (!text) return;
             welcome.style.display = "none";
@@ -177,11 +198,11 @@
             input.value = "";
             const typing = document.createElement("div");
             typing.className = "message bot";
-            typing.innerHTML = '<div class="avatar">M</div><div class="typing">MaChatBot is thinking...</div>';
+            typing.innerHTML = '<div class="avatar">M</div><div class="typing">생각하는 중...</div>';
             chat.appendChild(typing);
             setTimeout(() => {
                 typing.remove();
-                addMessage("That is an interesting direction. Tell me a little more about what you want to create, and I will help you shape it.", "bot");
+                addMessage(offlineReply(text), "bot");
             }, 650);
         }
 
