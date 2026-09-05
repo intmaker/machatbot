@@ -134,11 +134,7 @@
             <button class="new-chat" id="newChat"><span>＋</span> 새 대화</button>
             <div>
                 <p class="nav-label">최근 대화</p>
-                <nav class="history">
-                    <button class="active">차분한 아침 아이디어</button>
-                    <button>창의적인 한 주 계획</button>
-                    <button>새로운 주제 쉽게 이해하기</button>
-                </nav>
+                <nav class="history" id="history"></nav>
             </div>
             <div class="sidebar-footer"><div class="status" id="connectionStatus">오프라인 모드로 실행 중</div><div id="connectionDescription">인터넷과 API 없이도 대화할 수 있어요.</div></div>
         </aside>
@@ -199,8 +195,11 @@
         const connectionStatus = document.querySelector("#connectionStatus");
         const connectionDescription = document.querySelector("#connectionDescription");
         const disclaimer = document.querySelector("#disclaimer");
+        const history = document.querySelector("#history");
         const savedConfig = JSON.parse(localStorage.getItem("machatbot-api-config") || "null");
+        let conversations = JSON.parse(localStorage.getItem("machatbot-conversations") || "[]");
         let conversation = [];
+        let currentConversationId = null;
 
         if (savedConfig) {
             apiKeyInput.value = savedConfig.key || "";
@@ -217,6 +216,65 @@
 
         updateConnectionState();
 
+        function saveConversations() {
+            localStorage.setItem("machatbot-conversations", JSON.stringify(conversations));
+        }
+
+        function saveCurrentConversation() {
+            if (!conversation.length) return;
+            const firstMessage = conversation.find((message) => message.role === "user");
+            if (!firstMessage) return;
+            if (!currentConversationId) currentConversationId = crypto.randomUUID();
+            const existing = conversations.find((item) => item.id === currentConversationId);
+            const savedConversation = {
+                id: currentConversationId,
+                title: firstMessage.content.slice(0, 28) + (firstMessage.content.length > 28 ? "..." : ""),
+                messages: conversation,
+                updatedAt: Date.now()
+            };
+            if (existing) Object.assign(existing, savedConversation);
+            else conversations.push(savedConversation);
+            saveConversations();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            history.innerHTML = "";
+            conversations
+                .slice()
+                .sort((first, second) => second.updatedAt - first.updatedAt)
+                .forEach((savedConversation) => {
+                    const button = document.createElement("button");
+                    button.textContent = savedConversation.title;
+                    button.className = savedConversation.id === currentConversationId ? "active" : "";
+                    button.addEventListener("click", () => loadConversation(savedConversation.id));
+                    history.appendChild(button);
+                });
+        }
+
+        function renderConversation() {
+            chat.innerHTML = "";
+            conversation.forEach((message) => {
+                const element = document.createElement("div");
+                element.className = `message ${message.role === "user" ? "user" : "bot"}`;
+                element.innerHTML = `<div class="avatar">${message.role === "user" ? "YOU" : "M"}</div><div class="bubble"></div>`;
+                element.querySelector(".bubble").textContent = message.content;
+                chat.appendChild(element);
+            });
+            welcome.style.display = conversation.length ? "none" : "block";
+        }
+
+        function loadConversation(id) {
+            const savedConversation = conversations.find((item) => item.id === id);
+            if (!savedConversation) return;
+            currentConversationId = id;
+            conversation = savedConversation.messages.map((message) => ({ ...message }));
+            renderConversation();
+            renderHistory();
+        }
+
+        renderHistory();
+
         function addMessage(text, type) {
             const message = document.createElement("div");
             message.className = `message ${type}`;
@@ -224,6 +282,7 @@
             message.querySelector(".bubble").textContent = text;
             chat.appendChild(message);
             if (type === "user" || type === "bot") conversation.push({ role: type === "user" ? "user" : "assistant", content: text });
+            saveCurrentConversation();
             message.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
 
@@ -290,8 +349,16 @@
 
         composer.addEventListener("submit", (event) => { event.preventDefault(); send(); });
         document.querySelectorAll(".suggestion").forEach((button) => button.addEventListener("click", () => { input.value = button.textContent; input.focus(); }));
-        document.querySelector("#newChat").addEventListener("click", () => { chat.innerHTML = ""; conversation = []; welcome.style.display = "block"; input.focus(); });
-        document.querySelector("#clearChat").addEventListener("click", () => { chat.innerHTML = ""; conversation = []; welcome.style.display = "block"; });
+        document.querySelector("#newChat").addEventListener("click", () => { currentConversationId = null; chat.innerHTML = ""; conversation = []; welcome.style.display = "block"; renderHistory(); input.focus(); });
+        document.querySelector("#clearChat").addEventListener("click", () => {
+            conversations = conversations.filter((savedConversation) => savedConversation.id !== currentConversationId);
+            saveConversations();
+            currentConversationId = null;
+            chat.innerHTML = "";
+            conversation = [];
+            welcome.style.display = "block";
+            renderHistory();
+        });
         document.querySelector("#openSettings").addEventListener("click", () => settingsDialog.showModal());
         document.querySelector("#closeSettings").addEventListener("click", () => settingsDialog.close());
         document.querySelector("#removeKey").addEventListener("click", () => {
