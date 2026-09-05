@@ -74,6 +74,8 @@
         h1 { margin: 0; font-size: clamp(20px, 2.2vw, 27px); letter-spacing: -.04em; }
         .top-action { padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; }
         .top-action:hover { color: var(--ink); border-color: #53606c; }
+        .top-actions { display: flex; gap: 8px; }
+        .settings { color: var(--accent); }
 
         .conversation { width: min(760px, 88%); flex: 1; margin: 0 auto; padding: 48px 0 24px; }
         .welcome { margin-bottom: 38px; }
@@ -101,6 +103,17 @@
         .send:hover { transform: translateY(-2px); background: #d7ff86; }
         .disclaimer { margin: 11px 0 0; color: #596672; font-size: 11px; text-align: center; }
         .typing { color: var(--muted); font-size: 13px; font-style: italic; }
+        dialog { width: min(440px, calc(100% - 32px)); padding: 0; border: 1px solid #3b4753; border-radius: 12px; background: #151c24; color: var(--ink); box-shadow: 0 24px 80px rgba(0, 0, 0, .55); }
+        dialog::backdrop { background: rgba(4, 8, 12, .76); }
+        .settings-form { display: grid; gap: 17px; padding: 25px; }
+        .settings-form h2 { margin: 0; font-size: 20px; }
+        .settings-form p { margin: -8px 0 2px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+        .settings-form label { display: grid; gap: 7px; color: #b8c3cc; font-size: 12px; font-weight: 600; }
+        .settings-form input { width: 100%; padding: 10px 11px; border: 1px solid #36424f; border-radius: 7px; outline: 0; background: #0f151c; color: var(--ink); font-size: 13px; }
+        .settings-form input:focus { border-color: var(--accent); }
+        .settings-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 3px; }
+        .settings-actions button { padding: 9px 13px; border: 1px solid #36424f; border-radius: 7px; background: transparent; color: var(--muted); }
+        .settings-actions .save { border-color: var(--accent); background: var(--accent); color: var(--accent-dark); font-weight: 700; }
 
         @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 700px) {
@@ -127,12 +140,15 @@
                     <button>새로운 주제 쉽게 이해하기</button>
                 </nav>
             </div>
-            <div class="sidebar-footer"><div class="status">오프라인 모드로 실행 중</div><div>인터넷과 API 없이도 대화할 수 있어요.</div></div>
+            <div class="sidebar-footer"><div class="status" id="connectionStatus">오프라인 모드로 실행 중</div><div id="connectionDescription">인터넷과 API 없이도 대화할 수 있어요.</div></div>
         </aside>
         <main class="main">
             <header class="topbar">
-                <div><p class="eyebrow">나만의 오프라인 AI 친구</p><h1>다시 만나서 반가워요.</h1></div>
-                <button class="top-action" id="clearChat">대화 지우기</button>
+                <div><p class="eyebrow">나만의 AI 친구</p><h1>다시 만나서 반가워요.</h1></div>
+                <div class="top-actions">
+                    <button class="top-action settings" id="openSettings">API 설정</button>
+                    <button class="top-action" id="clearChat">대화 지우기</button>
+                </div>
             </header>
             <section class="conversation" aria-live="polite">
                 <div class="welcome" id="welcome">
@@ -151,15 +167,54 @@
                     <input id="input" type="text" autocomplete="off" placeholder="무엇이든 물어보세요..." aria-label="MaChatBot에게 보낼 메시지">
                     <button class="send" type="submit" aria-label="메시지 보내기">↑</button>
                 </form>
-                <p class="disclaimer">인터넷과 외부 API를 사용하지 않는 오프라인 대화입니다. 중요한 정보는 확인해 주세요.</p>
+                <p class="disclaimer" id="disclaimer">인터넷과 외부 API를 사용하지 않는 오프라인 대화입니다. 중요한 정보는 확인해 주세요.</p>
             </div>
         </main>
     </div>
+    <dialog id="settingsDialog">
+        <form class="settings-form" id="settingsForm" method="dialog">
+            <h2>API 연결 설정</h2>
+            <p>키는 이 브라우저의 localStorage에만 저장됩니다. GitHub나 서버로 전송하지 않습니다. 브라우저에서 직접 API를 호출하므로 제공자의 CORS 정책이 필요합니다.</p>
+            <label>API 키<input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+            <label>API 주소<input id="apiEndpoint" type="url" autocomplete="url" value="https://api.openai.com/v1/chat/completions"></label>
+            <label>모델 이름<input id="apiModel" type="text" autocomplete="off" value="gpt-4o-mini"></label>
+            <div class="settings-actions">
+                <button type="button" id="removeKey">저장된 키 삭제</button>
+                <button type="button" id="closeSettings">취소</button>
+                <button class="save" type="submit">저장하기</button>
+            </div>
+        </form>
+    </dialog>
     <script>
         const input = document.querySelector("#input");
         const chat = document.querySelector("#chat");
         const welcome = document.querySelector("#welcome");
         const composer = document.querySelector("#composer");
+        const settingsDialog = document.querySelector("#settingsDialog");
+        const settingsForm = document.querySelector("#settingsForm");
+        const apiKeyInput = document.querySelector("#apiKey");
+        const apiEndpointInput = document.querySelector("#apiEndpoint");
+        const apiModelInput = document.querySelector("#apiModel");
+        const connectionStatus = document.querySelector("#connectionStatus");
+        const connectionDescription = document.querySelector("#connectionDescription");
+        const disclaimer = document.querySelector("#disclaimer");
+        const savedConfig = JSON.parse(localStorage.getItem("machatbot-api-config") || "null");
+        let conversation = [];
+
+        if (savedConfig) {
+            apiKeyInput.value = savedConfig.key || "";
+            apiEndpointInput.value = savedConfig.endpoint || apiEndpointInput.value;
+            apiModelInput.value = savedConfig.model || apiModelInput.value;
+        }
+
+        function updateConnectionState() {
+            const hasApi = Boolean(JSON.parse(localStorage.getItem("machatbot-api-config") || "null")?.key);
+            connectionStatus.textContent = hasApi ? "API 연결 설정됨" : "오프라인 모드로 실행 중";
+            connectionDescription.textContent = hasApi ? "설정한 모델과 직접 대화합니다." : "인터넷과 API 없이도 대화할 수 있어요.";
+            disclaimer.textContent = hasApi ? "설정한 API로 대화합니다. 키는 이 브라우저에만 저장됩니다." : "인터넷과 외부 API를 사용하지 않는 오프라인 대화입니다. 중요한 정보는 확인해 주세요.";
+        }
+
+        updateConnectionState();
 
         function addMessage(text, type) {
             const message = document.createElement("div");
@@ -167,6 +222,7 @@
             message.innerHTML = `<div class="avatar">${type === "user" ? "YOU" : "M"}</div><div class="bubble"></div>`;
             message.querySelector(".bubble").textContent = text;
             chat.appendChild(message);
+            if (type === "user" || type === "bot") conversation.push({ role: type === "user" ? "user" : "assistant", content: text });
             message.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
 
@@ -191,7 +247,19 @@
             return "흥미로운 이야기네요. 목적이나 원하는 결과를 한 문장만 더 알려 주시면, 다음 단계와 선택지를 함께 정리해 볼게요.";
         }
 
-        function send(text = input.value.trim()) {
+        async function apiReply() {
+            const config = JSON.parse(localStorage.getItem("machatbot-api-config") || "null");
+            const response = await fetch(config.endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.key}` },
+                body: JSON.stringify({ model: config.model, messages: conversation.slice(-12), temperature: 0.7 })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error?.message || `API 오류 (${response.status})`);
+            return data.choices?.[0]?.message?.content || "API에서 답변을 받지 못했어요.";
+        }
+
+        async function send(text = input.value.trim()) {
             if (!text) return;
             welcome.style.display = "none";
             addMessage(text, "user");
@@ -200,16 +268,35 @@
             typing.className = "message bot";
             typing.innerHTML = '<div class="avatar">M</div><div class="typing">생각하는 중...</div>';
             chat.appendChild(typing);
-            setTimeout(() => {
+            try {
+                const config = JSON.parse(localStorage.getItem("machatbot-api-config") || "null");
+                const reply = config?.key ? await apiReply() : await new Promise((resolve) => setTimeout(() => resolve(offlineReply(text)), 650));
                 typing.remove();
-                addMessage(offlineReply(text), "bot");
-            }, 650);
+                addMessage(reply, "bot");
+            } catch (error) {
+                typing.remove();
+                addMessage(`API에 연결하지 못했어요. ${error.message} 설정에서 키와 주소를 확인해 주세요.`, "bot");
+            }
         }
 
         composer.addEventListener("submit", (event) => { event.preventDefault(); send(); });
         document.querySelectorAll(".suggestion").forEach((button) => button.addEventListener("click", () => { input.value = button.textContent; input.focus(); }));
-        document.querySelector("#newChat").addEventListener("click", () => { chat.innerHTML = ""; welcome.style.display = "block"; input.focus(); });
-        document.querySelector("#clearChat").addEventListener("click", () => { chat.innerHTML = ""; welcome.style.display = "block"; });
+        document.querySelector("#newChat").addEventListener("click", () => { chat.innerHTML = ""; conversation = []; welcome.style.display = "block"; input.focus(); });
+        document.querySelector("#clearChat").addEventListener("click", () => { chat.innerHTML = ""; conversation = []; welcome.style.display = "block"; });
+        document.querySelector("#openSettings").addEventListener("click", () => settingsDialog.showModal());
+        document.querySelector("#closeSettings").addEventListener("click", () => settingsDialog.close());
+        document.querySelector("#removeKey").addEventListener("click", () => {
+            localStorage.removeItem("machatbot-api-config");
+            apiKeyInput.value = "";
+            updateConnectionState();
+            settingsDialog.close();
+        });
+        settingsForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            localStorage.setItem("machatbot-api-config", JSON.stringify({ key: apiKeyInput.value.trim(), endpoint: apiEndpointInput.value.trim(), model: apiModelInput.value.trim() }));
+            updateConnectionState();
+            settingsDialog.close();
+        });
     </script>
 </body>
 </html>
