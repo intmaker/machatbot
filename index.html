@@ -176,7 +176,7 @@
             <h2>API 연결 설정</h2>
             <p>키는 이 브라우저의 localStorage에만 저장됩니다. GitHub나 서버로 전송하지 않습니다. 브라우저에서 직접 API를 호출하므로 제공자의 CORS 정책이 필요합니다.</p>
             <label>API 키<input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
-            <label>API 주소<input id="apiEndpoint" type="url" autocomplete="url" value="https://api.openai.com/v1/chat/completions"></label>
+            <label>API 주소 (OpenAI는 비워도 됨)<input id="apiEndpoint" type="url" autocomplete="url" placeholder="https://api.openai.com/v1/chat/completions" value="https://api.openai.com/v1/chat/completions"></label>
             <label>모델 이름<input id="apiModel" type="text" autocomplete="off" value="gpt-4o-mini"></label>
             <div class="settings-actions">
                 <button type="button" id="removeKey">저장된 키 삭제</button>
@@ -195,6 +195,7 @@
         const apiKeyInput = document.querySelector("#apiKey");
         const apiEndpointInput = document.querySelector("#apiEndpoint");
         const apiModelInput = document.querySelector("#apiModel");
+        const defaultApiEndpoint = "https://api.openai.com/v1/chat/completions";
         const connectionStatus = document.querySelector("#connectionStatus");
         const connectionDescription = document.querySelector("#connectionDescription");
         const disclaimer = document.querySelector("#disclaimer");
@@ -249,10 +250,18 @@
 
         async function apiReply() {
             const config = JSON.parse(localStorage.getItem("machatbot-api-config") || "null");
-            const response = await fetch(config.endpoint, {
+            const response = await fetch(config.endpoint || defaultApiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.key}` },
-                body: JSON.stringify({ model: config.model, messages: conversation.slice(-12), temperature: 0.7 })
+                body: JSON.stringify({
+                    model: config.model,
+                    messages: [
+                        { role: "system", content: "당신은 친절한 한국어 AI 도우미입니다. 사용자의 질문에 핵심만 생략하지 말고 이해하기 쉬운 문단과 예시를 포함해 충분히 자세하게 답변하세요." },
+                        ...conversation.slice(-12)
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 1200
+                })
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.error?.message || `API 오류 (${response.status})`);
